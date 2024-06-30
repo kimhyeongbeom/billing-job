@@ -91,6 +91,11 @@ public class BillingJobConfiguration {
     }
 
     @Bean
+    public PricingService pricingService() {
+        return new PricingService();
+    }
+
+    @Bean
     public Step step3(JobRepository jobRepository, JdbcTransactionManager transactionManager,
                       ItemReader<BillingData> billingDataTableReader,
                       ItemProcessor<BillingData, ReportingData> billingDataProcessor,
@@ -100,6 +105,9 @@ public class BillingJobConfiguration {
                 .reader(billingDataTableReader)
                 .processor(billingDataProcessor)
                 .writer(billingDataFileWriter)
+                .faultTolerant()
+                .retry(PricingException.class)
+                .retryLimit(100)
                 .build();
     }
 
@@ -119,8 +127,8 @@ public class BillingJobConfiguration {
     }
 
     @Bean
-    public BillingDataProcessor billingDataProcessor() {
-        return new BillingDataProcessor();
+    public BillingDataProcessor billingDataProcessor(PricingService pricingService) {
+        return new BillingDataProcessor(pricingService);
     }
 
     @Bean
