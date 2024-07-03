@@ -13,6 +13,7 @@ import org.springframework.batch.item.database.JdbcBatchItemWriter;
 import org.springframework.batch.item.database.builder.JdbcBatchItemWriterBuilder;
 import org.springframework.batch.item.file.FlatFileItemWriter;
 import org.springframework.batch.item.file.builder.FlatFileItemWriterBuilder;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -57,7 +58,7 @@ public class BillingJobConfiguration {
     }
 
     @Bean
-    public JdbcBatchItemWriter<BillingData> billingDataTableWriter(DataSource dataSource) {
+    public JdbcBatchItemWriter<BillingData> billingDataTableWriter(@Qualifier("workDb")DataSource dataSource) {
         String sql = "insert into BILLING_DATA values (:dataYear, :dataMonth, :accountId, :phoneNumber, :dataUsage, :callDuration, :smsCount)";
         return new JdbcBatchItemWriterBuilder<BillingData>()
                 .dataSource(dataSource)

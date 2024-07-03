@@ -1,0 +1,19 @@
+spring:
+  application:
+    name: billing-job
+
+  datasource:
+    main:
+      jdbcUrl: jdbc:postgresql://localhost:5432/postgres
+      username: postgres
+      password: leopard2
+      driverClassName: org.postgresql.Driver
+    second:
+      jdbcUrl: jdbc:postgresql://localhost:5432/second
+      username: postgres
+      password: leopard2
+      driverClassName: org.postgresql.Driver
+
+  batch:
+    job:
+      enabled: true
