@@ -12,6 +12,7 @@ import org.springframework.batch.item.ItemWriter;
 import org.springframework.batch.item.database.JdbcBatchItemWriter;
 import org.springframework.batch.item.database.builder.JdbcBatchItemWriterBuilder;
 import org.springframework.batch.item.file.FlatFileItemWriter;
+import org.springframework.batch.item.file.FlatFileParseException;
 import org.springframework.batch.item.file.builder.FlatFileItemWriterBuilder;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
@@ -36,6 +37,12 @@ public class BillingJobConfiguration {
                 .next(step2)
                 .next(step3)
                 .build();
+    }
+
+    @Bean
+    @StepScope
+    public BillingDataSkipListener skipListener(@Value("#{jobParameters['skip.file']}") String skippedFile) {
+        return new BillingDataSkipListener(skippedFile);
     }
 
     @Bean
@@ -70,12 +77,23 @@ public class BillingJobConfiguration {
     @Bean
     public Step step2(
             JobRepository jobRepository, JdbcTransactionManager transactionManager,
-            ItemReader<BillingData> billingDataFileReader, ItemWriter<BillingData> billingDataTableWriter) {
+            ItemReader<BillingData> billingDataFileReader,
+            ItemWriter<BillingData> billingDataTableWriter,
+            BillingDataSkipListener skipListener) {
         return new StepBuilder("fileIngestion", jobRepository)
                 .<BillingData, BillingData>chunk(100, transactionManager)
                 .reader(billingDataFileReader)
                 .writer(billingDataTableWriter)
+                .faultTolerant()
+                .skip(FlatFileParseException.class)
+                .skipLimit(10)
+                .listener(skipListener)
                 .build();
+    }
+
+    @Bean
+    public PricingService pricingService() {
+        return new PricingService();
     }
 
     @Bean
@@ -88,6 +106,9 @@ public class BillingJobConfiguration {
                 .reader(billingDataTableReader)
                 .processor(billingDataProcessor)
                 .writer(billingDataFileWriter)
+                .faultTolerant()
+                .retry(PricingException.class)
+                .retryLimit(100)
                 .build();
     }
 
@@ -107,8 +128,8 @@ public class BillingJobConfiguration {
     }
 
     @Bean
-    public BillingDataProcessor billingDataProcessor() {
-        return new BillingDataProcessor();
+    public BillingDataProcessor billingDataProcessor(PricingService pricingService) {
+        return new BillingDataProcessor(pricingService);
     }
 
     @Bean
